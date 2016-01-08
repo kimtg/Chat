@@ -36,8 +36,6 @@ public class Chat extends JFrame {
 	private TextArea textAreaMsg;
 	private Button buttonSend;
 
-	private static int serverPort;
-	private static ServerSocket serverSocket = null;
 	private static Thread serverThread = null;
 	private static Chat thisFrame;
 	private JPanel panel;
@@ -156,7 +154,7 @@ public class Chat extends JFrame {
 				String dest = textFieldIPAddr.getText();
 
 				try {
-					echoSocket = new Socket(dest, serverPort);
+					echoSocket = new Socket(dest, Integer.parseInt(textFieldDestPort.getText()));
 					out = new PrintWriter(echoSocket.getOutputStream(), true);
 				} catch (UnknownHostException ex) {
 					textAreaLog.append(dest + ": Don't know about host.\n");
@@ -192,23 +190,22 @@ public class Chat extends JFrame {
 		changeListeningPort();
 	}
 
-	@SuppressWarnings("deprecation")
 	private void changeListeningPort() {
-		if (serverSocket != null) {
-			serverThread.stop();
-			try {
-				serverSocket.close();
-			} catch (IOException e) {
-				textAreaLog.append(e.toString());
-			}
+		if (serverThread != null) {
+			serverThread.interrupt();
 		}
-		serverPort = Integer.parseInt(textFieldListeningPort.getText());
-		serverThread = new Thread(new Server());
+		int newPort = Integer.parseInt(textFieldListeningPort.getText());
+		serverThread = new Thread(new Server(newPort));
 		serverThread.start();
 	}
 
 	public static class Server implements Runnable {
-
+		int serverPort;
+		ServerSocket serverSocket = null;
+		public Server(int serverPort) {
+			this.serverPort = serverPort;
+		}
+		
 		@Override
 		public void run() {
 			textAreaLog.append("Welcome to Chat\n");
@@ -245,11 +242,11 @@ public class Chat extends JFrame {
 				serverSocket = new ServerSocket(serverPort);
 			} catch (IOException e) {
 				System.err.println("Could not listen on port.");
-				System.exit(1);
+				e.printStackTrace();
 			}
 
 			Socket clientSocket = null;
-			while (true) {
+			while (!Thread.currentThread().isInterrupted()) {
 				try {
 					clientSocket = serverSocket.accept();
 				} catch (IOException e) {
@@ -300,7 +297,12 @@ public class Chat extends JFrame {
 					e.printStackTrace();
 				}
 			}
-			// serverSocket.close(); }
+			try {
+				serverSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
