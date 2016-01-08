@@ -5,8 +5,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
-import java.awt.TextArea;
-import java.awt.Button;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,6 +24,8 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import java.awt.FlowLayout;
+import java.awt.TextArea;
+
 import javax.swing.JButton;
 
 @SuppressWarnings("serial")
@@ -34,19 +34,21 @@ public class Chat extends JFrame {
 	private JPanel contentPane;
 	private static TextArea textAreaLog;
 	private TextArea textAreaMsg;
-	private Button buttonSend;
+	private JButton buttonSend;
 
 	private static Thread serverThread = null;
 	private static Chat thisFrame;
 	private JPanel panel;
-	private JLabel lblNewLabel;
+	private JLabel lblDestination;
 	private JLabel lblPort;
 	private JTextField textFieldDestPort;
 	private JPanel panel_1;
 	private JTextField textFieldIPAddr;
 	private JPanel panel_2;
 	private JLabel lblListeningPort;
+	private JLabel lblNickname;
 	private JTextField textFieldListeningPort;
+	private JTextField textFieldNickname;
 	private JButton btnChangePort;
 
 	/**
@@ -58,7 +60,6 @@ public class Chat extends JFrame {
 				try {
 					Chat frame = new Chat();
 					frame.setVisible(true);
-
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -88,7 +89,7 @@ public class Chat extends JFrame {
 		thisFrame = this;
 		setTitle("Chat");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 450, 536);
+		setBounds(100, 100, 470, 536);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -102,8 +103,8 @@ public class Chat extends JFrame {
 		panel = new JPanel();
 		contentPane.add(panel, BorderLayout.SOUTH);
 
-		lblNewLabel = new JLabel("Destination:");
-		panel.add(lblNewLabel);
+		lblDestination = new JLabel("Destination:");
+		panel.add(lblDestination);
 
 		textFieldIPAddr = new JTextField();
 		textFieldIPAddr.setText("127.0.0.1");
@@ -116,7 +117,7 @@ public class Chat extends JFrame {
 		textFieldDestPort = new JTextField();
 		textFieldDestPort.setText("3333");
 		panel.add(textFieldDestPort);
-		textFieldDestPort.setColumns(10);
+		textFieldDestPort.setColumns(4);
 
 		panel_1 = new JPanel();
 		contentPane.add(panel_1, BorderLayout.CENTER);
@@ -125,7 +126,7 @@ public class Chat extends JFrame {
 		textAreaMsg = new TextArea();
 		panel_1.add(textAreaMsg);
 
-		buttonSend = new Button("Send");
+		buttonSend = new JButton("Send");
 		panel_1.add(buttonSend, BorderLayout.EAST);
 
 		panel_2 = new JPanel();
@@ -138,7 +139,7 @@ public class Chat extends JFrame {
 		textFieldListeningPort = new JTextField();
 		textFieldListeningPort.setText("3333");
 		panel_2.add(textFieldListeningPort);
-		textFieldListeningPort.setColumns(10);
+		textFieldListeningPort.setColumns(4);
 		
 		btnChangePort = new JButton("Change Port");
 		btnChangePort.addActionListener(new ActionListener() {
@@ -147,6 +148,19 @@ public class Chat extends JFrame {
 			}
 		});
 		panel_2.add(btnChangePort);
+		lblNickname = new JLabel("Nickname:");
+		panel_2.add(lblNickname);
+		textFieldNickname = new JTextField();
+		try {
+			textFieldNickname.setText(InetAddress.getLocalHost().getHostName());
+		} catch (UnknownHostException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		panel_2.add(textFieldNickname);
+		textFieldNickname.setColumns(8);
+		this.pack();
+
 		buttonSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				Socket echoSocket = null;
@@ -162,18 +176,17 @@ public class Chat extends JFrame {
 					textAreaLog.append(dest + ": Couldn't get I/O for " + "the connection.\n");
 				}
 
-				// int key = (int) (rand.nextDouble() * 65535 + 1);
-
-				int key = 100;
+				int key = (int) (Math.random() * 65535 + 1); // random key
 				out.println(key);
 
-				char[] output = ChatProtocol.encodeString(textAreaMsg.getText(), key);
+				String message = textFieldNickname.getText() + ": " + textAreaMsg.getText();
+				char[] output = ChatProtocol.encodeString(message, key);
 				out.println(output.length);
 				// out.print(output);
 				for (int i = 0; i < output.length; i++) {
 					out.println((int) output[i]);
 				}
-				textAreaLog.append("                    " + dest + "<- " + textAreaMsg.getText() + "\n");
+				textAreaLog.append("                    " + dest + "<- " + message + "\n");
 				textAreaMsg.setText("");
 				// System.out.println(key);
 
@@ -201,13 +214,15 @@ public class Chat extends JFrame {
 
 	public static class Server implements Runnable {
 		int serverPort;
-		ServerSocket serverSocket = null;
+		
 		public Server(int serverPort) {
 			this.serverPort = serverPort;
 		}
 		
 		@Override
 		public void run() {
+			ServerSocket serverSocket = null;
+			
 			textAreaLog.append("Welcome to Chat\n");
 			textAreaLog.append("Listening on port " + serverPort + "\n");
 
