@@ -7,7 +7,6 @@ import javax.swing.border.EmptyBorder;
 
 import java.awt.TextArea;
 import java.awt.Button;
-import java.awt.TextField;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -21,6 +20,13 @@ import java.net.UnknownHostException;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.*;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+
+import java.awt.FlowLayout;
+import javax.swing.JButton;
 
 @SuppressWarnings("serial")
 public class Chat extends JFrame {
@@ -29,20 +35,26 @@ public class Chat extends JFrame {
 	private static TextArea textAreaLog;
 	private TextArea textAreaMsg;
 	private Button buttonSend;
-	private static TextField textFieldIPAddr;
 
 	private static int serverPort;
+	private static ServerSocket serverSocket = null;
+	private static Thread serverThread = null;
 	private static Chat thisFrame;
+	private JPanel panel;
+	private JLabel lblNewLabel;
+	private JLabel lblPort;
+	private JTextField textFieldDestPort;
+	private JPanel panel_1;
+	private JTextField textFieldIPAddr;
+	private JPanel panel_2;
+	private JLabel lblListeningPort;
+	private JTextField textFieldListeningPort;
+	private JButton btnChangePort;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		if (args.length < 1)
-			serverPort = 3333;
-		else
-			serverPort = Integer.parseInt(args[0]);
-
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -60,6 +72,21 @@ public class Chat extends JFrame {
 	 * Create the frame.
 	 */
 	public Chat() {
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (ClassNotFoundException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		} catch (InstantiationException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		} catch (IllegalAccessException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		} catch (UnsupportedLookAndFeelException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
 		thisFrame = this;
 		setTitle("Chat");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -74,10 +101,54 @@ public class Chat extends JFrame {
 
 		contentPane.add(textAreaLog, BorderLayout.NORTH);
 
+		panel = new JPanel();
+		contentPane.add(panel, BorderLayout.SOUTH);
+
+		lblNewLabel = new JLabel("Destination:");
+		panel.add(lblNewLabel);
+
+		textFieldIPAddr = new JTextField();
+		textFieldIPAddr.setText("127.0.0.1");
+		panel.add(textFieldIPAddr);
+		textFieldIPAddr.setColumns(10);
+
+		lblPort = new JLabel("Port:");
+		panel.add(lblPort);
+
+		textFieldDestPort = new JTextField();
+		textFieldDestPort.setText("3333");
+		panel.add(textFieldDestPort);
+		textFieldDestPort.setColumns(10);
+
+		panel_1 = new JPanel();
+		contentPane.add(panel_1, BorderLayout.CENTER);
+		panel_1.setLayout(new BorderLayout(0, 0));
+
 		textAreaMsg = new TextArea();
-		contentPane.add(textAreaMsg, BorderLayout.CENTER);
+		panel_1.add(textAreaMsg);
 
 		buttonSend = new Button("Send");
+		panel_1.add(buttonSend, BorderLayout.EAST);
+
+		panel_2 = new JPanel();
+		panel_1.add(panel_2, BorderLayout.NORTH);
+		panel_2.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+		lblListeningPort = new JLabel("Listening Port:");
+		panel_2.add(lblListeningPort);
+
+		textFieldListeningPort = new JTextField();
+		textFieldListeningPort.setText("3333");
+		panel_2.add(textFieldListeningPort);
+		textFieldListeningPort.setColumns(10);
+		
+		btnChangePort = new JButton("Change Port");
+		btnChangePort.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				changeListeningPort();
+			}
+		});
+		panel_2.add(btnChangePort);
 		buttonSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				Socket echoSocket = null;
@@ -90,23 +161,21 @@ public class Chat extends JFrame {
 				} catch (UnknownHostException ex) {
 					textAreaLog.append(dest + ": Don't know about host.\n");
 				} catch (IOException ex) {
-					textAreaLog.append(dest + ": Couldn't get I/O for "
-							+ "the connection.\n");
+					textAreaLog.append(dest + ": Couldn't get I/O for " + "the connection.\n");
 				}
 
-				//int key = (int) (rand.nextDouble() * 65535 + 1);
-				
+				// int key = (int) (rand.nextDouble() * 65535 + 1);
+
 				int key = 100;
 				out.println(key);
-				
+
 				char[] output = ChatProtocol.encodeString(textAreaMsg.getText(), key);
 				out.println(output.length);
-//				out.print(output);
+				// out.print(output);
 				for (int i = 0; i < output.length; i++) {
 					out.println((int) output[i]);
 				}
-				textAreaLog.append("                    " + dest + "<- "
-						+ textAreaMsg.getText() + "\n");
+				textAreaLog.append("                    " + dest + "<- " + textAreaMsg.getText() + "\n");
 				textAreaMsg.setText("");
 				// System.out.println(key);
 
@@ -119,16 +188,23 @@ public class Chat extends JFrame {
 				}
 			}
 		});
-		contentPane.add(buttonSend, BorderLayout.EAST);
+		
+		changeListeningPort();
+	}
 
-		textFieldIPAddr = new TextField();
-		textFieldIPAddr.setText("127.0.0.1");
-		contentPane.add(textFieldIPAddr, BorderLayout.SOUTH);
-
-		//
-		Thread t1 = new Thread(new Server());
-		t1.start();
-
+	@SuppressWarnings("deprecation")
+	private void changeListeningPort() {
+		if (serverSocket != null) {
+			serverThread.stop();
+			try {
+				serverSocket.close();
+			} catch (IOException e) {
+				textAreaLog.append(e.toString());
+			}
+		}
+		serverPort = Integer.parseInt(textFieldListeningPort.getText());
+		serverThread = new Thread(new Server());
+		serverThread.start();
 	}
 
 	public static class Server implements Runnable {
@@ -136,27 +212,22 @@ public class Chat extends JFrame {
 		@Override
 		public void run() {
 			textAreaLog.append("Welcome to Chat\n");
-
-			ServerSocket serverSocket = null;
 			textAreaLog.append("Listening on port " + serverPort + "\n");
 
 			String myAddr = null;
 
 			try {
 				boolean isLoopBack = true;
-				Enumeration<NetworkInterface> en = NetworkInterface
-						.getNetworkInterfaces();
+				Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
 				while (en.hasMoreElements()) {
 					NetworkInterface ni = en.nextElement();
 					if (ni.isLoopback())
 						continue;
 
-					Enumeration<InetAddress> inetAddresses = ni
-							.getInetAddresses();
+					Enumeration<InetAddress> inetAddresses = ni.getInetAddresses();
 					while (inetAddresses.hasMoreElements()) {
 						InetAddress ia = inetAddresses.nextElement();
-						if (ia.getHostAddress() != null
-								&& ia.getHostAddress().indexOf(".") != -1) {
+						if (ia.getHostAddress() != null && ia.getHostAddress().indexOf(".") != -1) {
 							myAddr = ia.getHostAddress();
 							isLoopBack = false;
 							break;
@@ -190,22 +261,20 @@ public class Chat extends JFrame {
 				BufferedReader in;
 				try {
 					out = new PrintWriter(clientSocket.getOutputStream(), true);
-					in = new BufferedReader(new InputStreamReader(
-							clientSocket.getInputStream()));
+					in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
 					int key;
 
 					key = Integer.parseInt(in.readLine());
 					int length = Integer.parseInt(in.readLine());
-					
+
 					char[] buffer = new char[length];
-					//in.read(buffer, 0, length);
+					// in.read(buffer, 0, length);
 					for (int i = 0; i < length; i++) {
 						buffer[i] = (char) Integer.parseInt(in.readLine());
 					}
 					String clientAddr = clientSocket.getInetAddress().getHostAddress();
-					textAreaLog.append(clientAddr + "-> "
-							+ new String(ChatProtocol.decodeString(buffer, key)) + "\n");
+					textAreaLog.append(clientAddr + "-> " + new String(ChatProtocol.decodeString(buffer, key)) + "\n");
 
 					// flash the window
 					if (!thisFrame.isFocused()) {
@@ -241,17 +310,17 @@ public class Chat extends JFrame {
 			System.out.println(input);
 			System.out.println("key: " + key);
 			char[] chars = input.toCharArray();
-			
+
 			for (int i = 0; i < chars.length; i++) {
 				System.out.print(chars[i] + " ");
 				System.out.print((int) chars[i] + " ");
-				chars[i] += key; 
+				chars[i] += key;
 				System.out.print((int) chars[i] + ",");
 			}
 			System.out.println();
 			return chars;
 		}
-		
+
 		public static char[] decodeString(char[] input, int key) {
 			System.out.println("decode");
 			System.out.println("key: " + key);
@@ -259,12 +328,12 @@ public class Chat extends JFrame {
 			for (int i = 0; i < chars.length; i++) {
 				chars[i] = input[i];
 				System.out.print((int) chars[i] + " ");
-				chars[i] -= key; 
+				chars[i] -= key;
 				System.out.print((int) chars[i] + ",");
 			}
 			System.out.println();
 			return chars;
-		}		
-		
+		}
+
 	}
 }
