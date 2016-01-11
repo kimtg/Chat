@@ -67,6 +67,35 @@ public class Chat extends JFrame {
 		});
 	}
 
+	private static void showMyAddr() {
+		String myAddr = null;
+
+		try {
+			boolean isLoopBack = true;
+			Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
+			while (en.hasMoreElements()) {
+				NetworkInterface ni = en.nextElement();
+				if (ni.isLoopback())
+					continue;
+
+				Enumeration<InetAddress> inetAddresses = ni.getInetAddresses();
+				while (inetAddresses.hasMoreElements()) {
+					InetAddress ia = inetAddresses.nextElement();
+					if (ia.getHostAddress() != null && ia.getHostAddress().indexOf(".") != -1) {
+						myAddr = ia.getHostAddress();
+						isLoopBack = false;
+						break;
+					}
+				}
+				if (!isLoopBack)
+					break;
+			}
+		} catch (SocketException e1) {
+			e1.printStackTrace();
+		}
+		textAreaLog.append("My IP address: " + myAddr + "\n");
+	}
+
 	/**
 	 * Create the frame.
 	 */
@@ -199,6 +228,8 @@ public class Chat extends JFrame {
 				}
 			}
 		});
+		textAreaLog.append("Welcome to Chat\n");
+		showMyAddr();
 		textAreaMsg.requestFocusInWindow();
 		changeListeningPort();
 	}
@@ -221,43 +252,15 @@ public class Chat extends JFrame {
 		
 		@Override
 		public void run() {
-			ServerSocket serverSocket = null;
-			
-			textAreaLog.append("Welcome to Chat\n");
-			textAreaLog.append("Listening on port " + serverPort + "\n");
-
-			String myAddr = null;
-
-			try {
-				boolean isLoopBack = true;
-				Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
-				while (en.hasMoreElements()) {
-					NetworkInterface ni = en.nextElement();
-					if (ni.isLoopback())
-						continue;
-
-					Enumeration<InetAddress> inetAddresses = ni.getInetAddresses();
-					while (inetAddresses.hasMoreElements()) {
-						InetAddress ia = inetAddresses.nextElement();
-						if (ia.getHostAddress() != null && ia.getHostAddress().indexOf(".") != -1) {
-							myAddr = ia.getHostAddress();
-							isLoopBack = false;
-							break;
-						}
-					}
-					if (!isLoopBack)
-						break;
-				}
-			} catch (SocketException e1) {
-				e1.printStackTrace();
-			}
-			textAreaLog.append("My IP address: " + myAddr + "\n");
+			ServerSocket serverSocket = null;					
 
 			try {
 				serverSocket = new ServerSocket(serverPort);
+				textAreaLog.append("Listening on port " + serverPort + ".\n");
 			} catch (IOException e) {
-				System.err.println("Could not listen on port.");
+				textAreaLog.append("Could not listen on port " + serverPort + ".\n" + e.toString());
 				e.printStackTrace();
+				return;
 			}
 
 			Socket clientSocket = null;
