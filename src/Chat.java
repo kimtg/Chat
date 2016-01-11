@@ -199,7 +199,7 @@ public class Chat extends JFrame {
 				}
 			}
 		});
-		
+		textAreaMsg.requestFocusInWindow();
 		changeListeningPort();
 	}
 
