@@ -127,29 +127,10 @@ public class Chat extends JFrame {
 		textAreaLog = new TextArea();
 		textAreaLog.setEditable(false);
 
-		contentPane.add(textAreaLog, BorderLayout.NORTH);
-
-		panel = new JPanel();
-		contentPane.add(panel, BorderLayout.SOUTH);
-
-		lblDestination = new JLabel("Destination:");
-		panel.add(lblDestination);
-
-		textFieldIPAddr = new JTextField();
-		textFieldIPAddr.setText("127.0.0.1");
-		panel.add(textFieldIPAddr);
-		textFieldIPAddr.setColumns(10);
-
-		lblPort = new JLabel("Port:");
-		panel.add(lblPort);
-
-		textFieldDestPort = new JTextField();
-		textFieldDestPort.setText("3333");
-		panel.add(textFieldDestPort);
-		textFieldDestPort.setColumns(4);
+		contentPane.add(textAreaLog, BorderLayout.CENTER);
 
 		panel_1 = new JPanel();
-		contentPane.add(panel_1, BorderLayout.CENTER);
+		contentPane.add(panel_1, BorderLayout.SOUTH);
 		panel_1.setLayout(new BorderLayout(0, 0));
 
 		textAreaMsg = new TextArea();
@@ -188,6 +169,25 @@ public class Chat extends JFrame {
 		}
 		panel_2.add(textFieldNickname);
 		textFieldNickname.setColumns(8);
+
+		panel = new JPanel();
+		panel_1.add(panel, BorderLayout.SOUTH);
+
+		lblDestination = new JLabel("Destination:");
+		panel.add(lblDestination);
+
+		textFieldIPAddr = new JTextField();
+		textFieldIPAddr.setText("127.0.0.1");
+		panel.add(textFieldIPAddr);
+		textFieldIPAddr.setColumns(10);
+
+		lblPort = new JLabel("Port:");
+		panel.add(lblPort);
+
+		textFieldDestPort = new JTextField();
+		textFieldDestPort.setText("3333");
+		panel.add(textFieldDestPort);
+		textFieldDestPort.setColumns(4);
 		this.pack();
 
 		buttonSend.addActionListener(new ActionListener() {
